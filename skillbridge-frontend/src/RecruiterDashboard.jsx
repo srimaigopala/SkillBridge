@@ -39,7 +39,7 @@ import { ApplicationStatusPill, MatchMeter, SkillChips } from './components/ui.j
 import StudentProfileModal from './shared/StudentProfileModal.jsx'
 import DiscoverStudents from './shared/DiscoverStudents.jsx'
 
-const API = 'http://localhost:8080'
+const API = import.meta.env.VITE_API_URL || 'http://localhost:8080';
 
 const emptyJob = {
 

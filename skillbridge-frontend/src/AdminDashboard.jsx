@@ -58,8 +58,7 @@ import StudentProfileModal from './shared/StudentProfileModal.jsx'
 
 
 
-const API = 'http://localhost:8080'
-
+const API = import.meta.env.VITE_API_URL || 'https://skillbridge-2jeh.onrender.com';
 
 
 const navigation = [

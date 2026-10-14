@@ -16,8 +16,7 @@ import StudentDashboard from './StudentDashboard.jsx'
 import RecruiterDashboard from './RecruiterDashboard.jsx'
 import AdminDashboard from './AdminDashboard.jsx'
 import { DEMO_ACCOUNTS, DEMO_MODE } from './lib/demoAccounts.js'
-
-const API = 'http://localhost:8080'
+const API = import.meta.env.VITE_API_URL || 'https://skillbridge-2jeh.onrender.com';
 
 export default function App() {
   const [isRegister, setIsRegister] = useState(false)
