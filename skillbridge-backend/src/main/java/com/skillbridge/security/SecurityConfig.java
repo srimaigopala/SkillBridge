@@ -5,6 +5,7 @@ import com.skillbridge.config.SkillBridgeProperties;
 import com.skillbridge.repository.UserRepository;
 
 import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -53,19 +54,25 @@ public class SecurityConfig {
                 )
             )
 
-            // Return JSON instead of empty 401/403 responses
             .exceptionHandling(ex -> ex
                 .authenticationEntryPoint((request, response, e) ->
-                    writeError(response,
+                    writeError(
+                        response,
                         HttpServletResponse.SC_UNAUTHORIZED,
-                        "Authentication required"))
+                        "Authentication required"
+                    ))
                 .accessDeniedHandler((request, response, e) ->
-                    writeError(response,
+                    writeError(
+                        response,
                         HttpServletResponse.SC_FORBIDDEN,
-                        "You do not have permission to perform this action"))
+                        "You do not have permission to perform this action"
+                    ))
             )
 
             .authorizeHttpRequests(auth -> auth
+
+                // Allow browser CORS preflight requests
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                 // Allow Spring Boot error responses
                 .requestMatchers("/error").permitAll()
@@ -82,13 +89,18 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                 // Recruiters manage jobs; admins may also delete them
-                .requestMatchers(HttpMethod.POST, "/api/jobs").hasRole("RECRUITER")
-                .requestMatchers(HttpMethod.PUT, "/api/jobs/**").hasRole("RECRUITER")
-                .requestMatchers(HttpMethod.PATCH, "/api/jobs/**").hasRole("RECRUITER")
+                .requestMatchers(HttpMethod.POST, "/api/jobs")
+                    .hasRole("RECRUITER")
+                .requestMatchers(HttpMethod.PUT, "/api/jobs/**")
+                    .hasRole("RECRUITER")
+                .requestMatchers(HttpMethod.PATCH, "/api/jobs/**")
+                    .hasRole("RECRUITER")
                 .requestMatchers(HttpMethod.DELETE, "/api/jobs/**")
                     .hasAnyRole("RECRUITER", "ADMIN")
-                .requestMatchers("/api/jobs/my-jobs").hasRole("RECRUITER")
-                .requestMatchers("/api/jobs/*/match").hasRole("STUDENT")
+                .requestMatchers("/api/jobs/my-jobs")
+                    .hasRole("RECRUITER")
+                .requestMatchers("/api/jobs/*/match")
+                    .hasRole("STUDENT")
 
                 // Student-only areas
                 .requestMatchers(
@@ -97,16 +109,19 @@ public class SecurityConfig {
                 ).hasRole("STUDENT")
 
                 // Applications: students apply/withdraw, recruiters review
-                .requestMatchers(HttpMethod.POST, "/api/applications").hasRole("STUDENT")
-                .requestMatchers("/api/applications/my-applications").hasRole("STUDENT")
-                .requestMatchers("/api/applications/*/withdraw").hasRole("STUDENT")
+                .requestMatchers(HttpMethod.POST, "/api/applications")
+                    .hasRole("STUDENT")
+                .requestMatchers("/api/applications/my-applications")
+                    .hasRole("STUDENT")
+                .requestMatchers("/api/applications/*/withdraw")
+                    .hasRole("STUDENT")
                 .requestMatchers(
                     "/api/applications/received",
                     "/api/applications/job/**",
                     "/api/applications/*/status"
                 ).hasRole("RECRUITER")
 
-                // Résumé downloads of other students: recruiters and admins
+                // Resume downloads: recruiters and admins
                 .requestMatchers("/api/students/*/resume")
                     .hasAnyRole("RECRUITER", "ADMIN")
 
@@ -130,64 +145,66 @@ public class SecurityConfig {
         response.setStatus(status);
         response.setContentType("application/json");
         response.getWriter().write(
-                "{\"status\":" + status + ",\"message\":\"" + message + "\"}");
+            "{\"status\":" + status
+                + ",\"message\":\"" + message + "\"}"
+        );
     }
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
 
-        CorsConfiguration configuration =
-                new CorsConfiguration();
+        CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(
-                properties.cors().allowedOrigins()
+            properties.cors().allowedOrigins()
         );
 
         configuration.setAllowedMethods(
-                List.of(
-                    "GET",
-                    "POST",
-                    "PUT",
-                    "PATCH",
-                    "DELETE",
-                    "OPTIONS"
-                )
+            List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+            )
         );
 
         configuration.setAllowedHeaders(
-                List.of(
-                    "Authorization",
-                    "Content-Type"
-                )
+            List.of(
+                "Authorization",
+                "Content-Type"
+            )
         );
 
         configuration.setExposedHeaders(
-                List.of("Content-Disposition")
+            List.of("Content-Disposition")
         );
 
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source =
-                new UrlBasedCorsConfigurationSource();
+            new UrlBasedCorsConfigurationSource();
 
-        source.registerCorsConfiguration(
-                "/**",
-                configuration
-        );
+        source.registerCorsConfiguration("/**", configuration);
 
         return source;
     }
 
-    // Backed by the users table (replaces Spring's generated in-memory user)
+    // User authentication backed by the users table
     @Bean
-    public UserDetailsService userDetailsService(UserRepository userRepository) {
+    public UserDetailsService userDetailsService(
+            UserRepository userRepository) {
+
         return email -> userRepository.findByEmail(email)
-                .map(user -> User.withUsername(user.getEmail())
-                        .password(user.getPassword())
-                        .roles(user.getRole().name())
-                        .disabled(user.isDisabled())
-                        .build())
-                .orElseThrow(() -> new UsernameNotFoundException(email));
+            .map(user -> User.withUsername(user.getEmail())
+                .password(user.getPassword())
+                .roles(user.getRole().name())
+                .disabled(user.isDisabled())
+                .build())
+            .orElseThrow(() ->
+                new UsernameNotFoundException(email)
+            );
     }
 
     @Bean
